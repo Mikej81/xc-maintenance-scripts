@@ -12,6 +12,8 @@ Scripts:
 
 - service_cred_cleanup.sh: similiar to api credential cleanup, but for service credentials.
 
+- cdn_cleanup.sh: cleans up content distribution objects.
+
 To Run:
 
 ```bash
