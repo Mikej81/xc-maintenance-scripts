@@ -18,6 +18,8 @@ Scripts:
 
 - **old_object_purge.sh**: allows deletion of objects over than a specified date. [Default: 180 Days]
 
+- **al_ce_reboot_audit.sh**: outputs a list of Custome Edge Sites/Nodes and their latest (re)boot date-time.
+
 To Run:
 
 ```bash
