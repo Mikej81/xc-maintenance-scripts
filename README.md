@@ -20,6 +20,16 @@ Scripts:
 
 - **al_ce_reboot_audit.sh**: outputs a list of Custome Edge Sites/Nodes and their latest (re)boot date-time.
 
+- **application_backup.sh**: will back up all objects in Application Namespaces:
+
+  - HTTP Load Balancers
+  - TCP Load Balancers
+  - Origin Pools
+  - Service Policies
+  - Application Firewalls
+  - Custom Routes
+  - Certificates
+
 To Run:
 
 ```bash
