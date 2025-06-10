@@ -28,6 +28,7 @@ Scripts:
   - Service Policies
   - Application Firewalls
   - App Settings
+  - API Definitions
   - Custom Routes
   - Certificates
 

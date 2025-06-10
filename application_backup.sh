@@ -32,22 +32,37 @@ if [[ -z "$namespace_response" ]]; then
     exit 1
 fi
 
-namespaces=$(echo "$namespace_response" | jq -r '.items[].name')
+namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^system$')
+#namespaces+=" shared"
 
-# Loop through each namespace
-for namespace in $namespaces; do
+    # Loop through each namespace
+    for namespace in $namespaces; do
 
-    #account for Shared Namespace
-    is_shared=false
+    # Determine namespace context
+    is_special_namespace=false
     if [[ "$namespace" == "shared" ]]; then
-        is_shared=true
+        is_special_namespace=true
     fi
 
-    # Define jqfilter based on whether we're in the shared namespace
-    if [[ "$is_shared" == "true" ]]; then
-        jqfilter='.items[] | select((type == "object") and ((.name | startswith("ves-io-")) | not)) | .name'
+    # Define jqfilter based on whether we are in a system/shared namespace
+    if [[ "$is_special_namespace" == "true" ]]; then
+        jqfilter='.items[] 
+            | select(
+                (type == "object")
+                and (.namespace != "system")
+                and ((.name | startswith("ves-io-")) | not)
+            ) 
+            | .name'
     else
-        jqfilter='.items[] | select((type == "object") and ((.namespace == "shared" or .namespace == "system" or .tenant == "ves-io") | not) and ((.name | startswith("ves-io-")) | not)) | .name'
+        jqfilter='.items[] 
+            | select(
+                (type == "object") 
+                and (.namespace != "shared")
+                and (.namespace != "system")
+                and (.tenant != "ves-io") 
+                and ((.name | startswith("ves-io-")) | not)
+            ) 
+            | .name'
     fi
 
     echo "Processing namespace: $namespace"
@@ -65,7 +80,7 @@ for namespace in $namespaces; do
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/cdn_loadbalancers/${name}.json"
                     echo "   Backed up CDN LB: $name"
-                    any_objects=true
+                    #any_objects=true
                 fi
             done
         fi
@@ -84,14 +99,10 @@ for namespace in $namespaces; do
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/http_loadbalancers/${name}.json"
                     echo "   Backed up HTTP LB: $name"
-                    any_objects=true
+                    #any_objects=true
                 fi
             done
         fi
-    fi
-
-        if [ "$any_objects" = false ]; then
-        echo "  No http load balancers found in namespace: $namespace"
     fi
 
     # --- TCP Loadbalancers ---
@@ -105,14 +116,10 @@ for namespace in $namespaces; do
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/tcp_loadbalancers/${name}.json"
                     echo "   Backed up TCP LB: $name"
-                    any_objects=true
+                    #any_objects=true
                 fi
             done
         fi
-    fi
-
-    if [ "$any_objects" = false ]; then
-        echo "  No tcp load balancers found in namespace: $namespace"
     fi
 
     # --- Origin Pools ---
@@ -126,14 +133,10 @@ for namespace in $namespaces; do
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/origin_pools/${name}.json"
                     echo "   Backed up Origin Pool: $name"
-                    any_objects=true
+                    #any_objects=true
                 fi
             done
         fi
-    fi
-
-    if [ "$any_objects" = false ]; then
-        echo "  No origin pools found in namespace: $namespace"
     fi
 
     # --- Routes ---
@@ -147,40 +150,31 @@ for namespace in $namespaces; do
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/routes/${name}.json"
                     echo "   Backed up Route: $name"
-                    any_objects=true
+                    #any_objects=true
                 fi
             done
         fi
     fi
 
-    if [ "$any_objects" = false ]; then
-        echo "  No routes found in namespace: $namespace"
-    fi    
+    # --- Certificates ---
+    cert_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/certificates")
+    if echo "$cert_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$cert_list" | jq '.items | length')" -gt 0 ]; then
+            cert_names=$(echo "$cert_list" | jq -r "$jqfilter")
 
-# --- Certificates ---
-cert_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/certificates")
-if echo "$cert_list" | jq -e . >/dev/null 2>&1; then
-    if [ "$(echo "$cert_list" | jq '.items | length')" -gt 0 ]; then
-        cert_names=$(echo "$cert_list" | jq -r "$jqfilter")
-
-        if [ -n "$cert_names" ]; then
-            mkdir -p "$ns_backup_dir/certificates"
-            for name in $cert_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/certificates/$name")
-                if [[ -n "$obj_json" ]]; then
-                    echo "$obj_json" > "$ns_backup_dir/certificates/${name}.json"
-                    echo "   Backed up Certificate: $name"
-                    any_objects=true
-                fi
-            done
+            if [ -n "$cert_names" ]; then
+                mkdir -p "$ns_backup_dir/certificates"
+                for name in $cert_names; do
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/certificates/$name")
+                    if [[ -n "$obj_json" ]]; then
+                        echo "$obj_json" > "$ns_backup_dir/certificates/${name}.json"
+                        echo "   Backed up Certificate: $name"
+                        #any_objects=true
+                    fi
+                done
+            fi
         fi
     fi
-fi
-
-
-    if [ "$any_objects" = false ]; then
-        echo "  No certificates found in namespace: $namespace"
-    fi       
 
     # --- Service Policies ---
     policy_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/service_policys")
@@ -196,65 +190,73 @@ fi
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/service_policys/${name}.json"
                         echo "   Backed up Service Policy: $name"
-                        any_objects=true
+                        #any_objects=true
                     fi
                 done
             fi
         fi
     fi
 
-        if [ "$any_objects" = false ]; then
-        echo "  No service policies found in namespace: $namespace"
-    fi     
+    # --- Application Firewalls ---
+    firewall_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_firewalls")
+    if echo "$firewall_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$firewall_list" | jq '.items | length')" -gt 0 ]; then
 
-# --- Application Firewalls ---
-firewall_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_firewalls")
-if echo "$firewall_list" | jq -e . >/dev/null 2>&1; then
-    if [ "$(echo "$firewall_list" | jq '.items | length')" -gt 0 ]; then
+            firewall_names=$(echo "$firewall_list" | jq -r "$jqfilter")
 
-        firewall_names=$(echo "$firewall_list" | jq -r "$jqfilter")
-
-        if [ -n "$firewall_names" ]; then
-            mkdir -p "$ns_backup_dir/app_firewalls"
-            for name in $firewall_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_firewalls/$name")
-                if [[ -n "$obj_json" ]]; then
-                    echo "$obj_json" > "$ns_backup_dir/app_firewalls/${name}.json"
-                    echo "   Backed up App Firewall: $name"
-                    any_objects=true
-                fi
-            done
+            if [ -n "$firewall_names" ]; then
+                mkdir -p "$ns_backup_dir/app_firewalls"
+                for name in $firewall_names; do
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_firewalls/$name")
+                    if [[ -n "$obj_json" ]]; then
+                        echo "$obj_json" > "$ns_backup_dir/app_firewalls/${name}.json"
+                        echo "   Backed up App Firewall: $name"
+                        #any_objects=true
+                    fi
+                done
+            fi
         fi
     fi
-fi
 
-    if [ "$any_objects" = false ]; then
-        echo "  No app firewalls found in namespace: $namespace"
-    fi     
+    # --- App Settings ---
+    appsetting_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings")
+    if echo "$appsetting_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$appsetting_list" | jq '.items | length')" -gt 0 ]; then
+            appsetting_names=$(echo "$appsetting_list" | jq -r "$jqfilter")
 
- # --- App Settings ---
-appsetting_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings")
-if echo "$appsetting_list" | jq -e . >/dev/null 2>&1; then
-    if [ "$(echo "$appsetting_list" | jq '.items | length')" -gt 0 ]; then
-        appsetting_names=$(echo "$appsetting_list" | jq -r "$jqfilter")
-
-        if [ -n "$appsetting_names" ]; then
-            mkdir -p "$ns_backup_dir/app_settings"
-            for name in $appsetting_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings/$name")
-                if [[ -n "$obj_json" ]]; then
-                    echo "$obj_json" > "$ns_backup_dir/app_settings/${name}.json"
-                    echo "   Backed up App Settings: $name"
-                    any_objects=true
-                fi
-            done
+            if [ -n "$appsetting_names" ]; then
+                mkdir -p "$ns_backup_dir/app_settings"
+                for name in $appsetting_names; do
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings/$name")
+                    if [[ -n "$obj_json" ]]; then
+                        echo "$obj_json" > "$ns_backup_dir/app_settings/${name}.json"
+                        echo "   Backed up App Settings: $name"
+                        #any_objects=true
+                    fi
+                done
+            fi
         fi
     fi
-fi
 
-    if [ "$any_objects" = false ]; then
-        echo "  No app settings found in namespace: $namespace"
-    fi     
+    # --- API Definition ---
+    apidef_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/api_definitions")
+    if echo "$appsetting_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$apidef_list" | jq '.items | length')" -gt 0 ]; then
+            apidef_names=$(echo "$apidef_list" | jq -r "$jqfilter")
+
+            if [ -n "$apidef_names" ]; then
+                mkdir -p "$ns_backup_dir/api_definitions"
+                for name in $apidef_names; do
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/api_definitions/$name")
+                    if [[ -n "$obj_json" ]]; then
+                        echo "$obj_json" > "$ns_backup_dir/api_definitions/${name}.json"
+                        echo "   Backed up API Definition: $name"
+                        #any_objects=true
+                    fi
+                done
+            fi
+        fi
+    fi
 
     echo "----------------------------------------"
 done
