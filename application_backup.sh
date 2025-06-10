@@ -122,6 +122,23 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
         fi
     fi
 
+    # --- DRP ---
+    drp_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/proxys")
+    if echo "$drp_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$drp_list" | jq '.items | length')" -gt 0 ]; then
+            mkdir -p "$ns_backup_dir/proxys"
+            drp_names=$(echo "$drp_list" | jq -r '.items[].name // empty')
+            for name in $drp_names; do
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/proxys/$name?report_fields")
+                if [[ -n "$obj_json" ]]; then
+                    echo "$obj_json" > "$ns_backup_dir/proxys/${name}.json"
+                    echo "   Backed up DRP: $name"
+                    #any_objects=true
+                fi
+            done
+        fi
+    fi
+
     # --- Origin Pools ---
     origin_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/origin_pools")
     if echo "$origin_list" | jq -e . >/dev/null 2>&1; then
@@ -228,6 +245,27 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/app_firewalls/${name}.json"
                         echo "   Backed up App Firewall: $name"
+                        #any_objects=true
+                    fi
+                done
+            fi
+        fi
+    fi
+
+    # --- User Identifications ---
+    userid_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/user_identifications")
+    if echo "$userid_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$userid_list" | jq '.items | length')" -gt 0 ]; then
+
+            userid_names=$(echo "$userid_list" | jq -r "$jqfilter")
+
+            if [ -n "$userid_names" ]; then
+                mkdir -p "$ns_backup_dir/user_identifications"
+                for name in $userid_names; do
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/user_identifications/$name?report_fields")
+                    if [[ -n "$obj_json" ]]; then
+                        echo "$obj_json" > "$ns_backup_dir/user_identifications/${name}.json"
+                        echo "   Backed up User Identification: $name"
                         #any_objects=true
                     fi
                 done

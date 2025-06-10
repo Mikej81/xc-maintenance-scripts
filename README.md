@@ -24,10 +24,12 @@ Scripts:
 
   - HTTP Load Balancers
   - TCP Load Balancers
+  - HTTP Connect & DRP
   - Origin Pools
   - Health Checks
   - Service Policies
   - Application Firewalls
+  - User Identifications
   - App Settings
   - API Definitions
   - Custom Routes
