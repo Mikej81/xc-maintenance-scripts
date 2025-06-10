@@ -25,6 +25,7 @@ Scripts:
   - HTTP Load Balancers
   - TCP Load Balancers
   - Origin Pools
+  - Health Checks
   - Service Policies
   - Application Firewalls
   - App Settings
