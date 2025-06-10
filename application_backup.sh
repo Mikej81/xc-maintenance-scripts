@@ -228,6 +228,26 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
         fi
     fi
 
+    # --- Trusted CA  ---
+    ca_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/trusted_ca_lists")
+    if echo "$ca_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$ca_list" | jq '.items | length')" -gt 0 ]; then
+            ca_names=$(echo "$ca_list" | jq -r "$jqfilter")
+
+            if [ -n "$ca_names" ]; then
+                mkdir -p "$ns_backup_dir/trusted_ca_lists"
+                for name in $ca_names; do
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/trusted_ca_lists/$name")
+                    if [[ -n "$obj_json" ]]; then
+                        echo "$obj_json" > "$ns_backup_dir/trusted_ca_lists/${name}.json"
+                        echo "   Backed up Trusted CA: $name"
+                        #any_objects=true
+                    fi
+                done
+            fi
+        fi
+    fi
+
     # --- Service Policies ---
     policy_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/service_policys")
     if echo "$policy_list" | jq -e . >/dev/null 2>&1; then
