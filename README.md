@@ -34,6 +34,7 @@ Scripts:
   - API Definitions
   - Custom Routes
   - Certificates
+  - Virtual Sites
 
 To Run:
 

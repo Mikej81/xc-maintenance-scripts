@@ -76,7 +76,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             mkdir -p "$ns_backup_dir/cdn_loadbalancers"
             cdn_names=$(echo "$cdn_list" | jq -r '.items[].name // empty')
             for name in $cdn_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/cdn_loadbalancers/$name?report_fields")
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/cdn_loadbalancers/$name")
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/cdn_loadbalancers/${name}.json"
                     echo "   Backed up CDN LB: $name"
@@ -95,7 +95,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             mkdir -p "$ns_backup_dir/http_loadbalancers"
             http_names=$(echo "$http_list" | jq -r '.items[].name // empty')
             for name in $http_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/http_loadbalancers/$name?report_fields")
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/http_loadbalancers/$name")
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/http_loadbalancers/${name}.json"
                     echo "   Backed up HTTP LB: $name"
@@ -112,7 +112,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             mkdir -p "$ns_backup_dir/tcp_loadbalancers"
             tcp_names=$(echo "$tcp_list" | jq -r '.items[].name // empty')
             for name in $tcp_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/tcp_loadbalancers/$name?report_fields")
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/tcp_loadbalancers/$name")
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/tcp_loadbalancers/${name}.json"
                     echo "   Backed up TCP LB: $name"
@@ -129,10 +129,28 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             mkdir -p "$ns_backup_dir/proxys"
             drp_names=$(echo "$drp_list" | jq -r '.items[].name // empty')
             for name in $drp_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/proxys/$name?report_fields")
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/proxys/$name")
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/proxys/${name}.json"
                     echo "   Backed up DRP: $name"
+                    #any_objects=true
+                fi
+            done
+        fi
+    fi
+
+    # --- Virtual Sites ---
+    vs_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/virtual_sites")
+    if echo "$vs_list" | jq -e . >/dev/null 2>&1; then
+        if [ "$(echo "$vs_list" | jq '.items | length')" -gt 0 ]; then
+            
+            vs_names=$(echo "$vs_list" | jq -r "$jqfilter")
+            for name in $vs_names; do
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/virtual_sites/$name")
+                if [[ -n "$obj_json" ]]; then
+                    mkdir -p "$ns_backup_dir/virtual_sites"
+                    echo "$obj_json" > "$ns_backup_dir/virtual_sites/${name}.json"
+                    echo "   Backed up Virtual Site: $name"
                     #any_objects=true
                 fi
             done
@@ -146,7 +164,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             mkdir -p "$ns_backup_dir/origin_pools"
             origin_names=$(echo "$origin_list" | jq -r '.items[].name // empty')
             for name in $origin_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/origin_pools/$name?report_fields")
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/origin_pools/$name")
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/origin_pools/${name}.json"
                     echo "   Backed up Origin Pool: $name"
@@ -163,7 +181,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             mkdir -p "$ns_backup_dir/health_checks"
             hc_names=$(echo "$hc_list" | jq -r '.items[].name // empty')
             for name in $hc_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/healthchecks/$name?report_fields")
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/healthchecks/$name")
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/health_checks/${name}.json"
                     echo "   Backed up Health Check: $name"
@@ -180,7 +198,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             mkdir -p "$ns_backup_dir/routes"
             route_names=$(echo "$route_list" | jq -r "$jqfilter")
             for name in $route_names; do
-                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/routes/$name?report_fields")
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/routes/$name")
                 if [[ -n "$obj_json" ]]; then
                     echo "$obj_json" > "$ns_backup_dir/routes/${name}.json"
                     echo "   Backed up Route: $name"
@@ -199,7 +217,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             if [ -n "$cert_names" ]; then
                 mkdir -p "$ns_backup_dir/certificates"
                 for name in $cert_names; do
-                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/certificates/$name?report_fields")
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/certificates/$name")
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/certificates/${name}.json"
                         echo "   Backed up Certificate: $name"
@@ -220,7 +238,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             if [ -n "$policy_names" ]; then
                 mkdir -p "$ns_backup_dir/service_policys"
                 for name in $policy_names; do
-                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/service_policys/$name?report_fields")
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/service_policys/$name")
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/service_policys/${name}.json"
                         echo "   Backed up Service Policy: $name"
@@ -241,7 +259,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             if [ -n "$firewall_names" ]; then
                 mkdir -p "$ns_backup_dir/app_firewalls"
                 for name in $firewall_names; do
-                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_firewalls/$name?report_fields")
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_firewalls/$name")
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/app_firewalls/${name}.json"
                         echo "   Backed up App Firewall: $name"
@@ -262,7 +280,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             if [ -n "$userid_names" ]; then
                 mkdir -p "$ns_backup_dir/user_identifications"
                 for name in $userid_names; do
-                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/user_identifications/$name?report_fields")
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/user_identifications/$name")
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/user_identifications/${name}.json"
                         echo "   Backed up User Identification: $name"
@@ -282,7 +300,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             if [ -n "$appsetting_names" ]; then
                 mkdir -p "$ns_backup_dir/app_settings"
                 for name in $appsetting_names; do
-                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings/$name?report_fields")
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings/$name")
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/app_settings/${name}.json"
                         echo "   Backed up App Settings: $name"
@@ -302,7 +320,7 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name' | grep -v '^syst
             if [ -n "$apidef_names" ]; then
                 mkdir -p "$ns_backup_dir/api_definitions"
                 for name in $apidef_names; do
-                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/api_definitions/$name?report_fields")
+                    obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/api_definitions/$name")
                     if [[ -n "$obj_json" ]]; then
                         echo "$obj_json" > "$ns_backup_dir/api_definitions/${name}.json"
                         echo "   Backed up API Definition: $name"
