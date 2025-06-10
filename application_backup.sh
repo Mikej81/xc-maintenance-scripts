@@ -36,6 +36,20 @@ namespaces=$(echo "$namespace_response" | jq -r '.items[].name')
 
 # Loop through each namespace
 for namespace in $namespaces; do
+
+    #account for Shared Namespace
+    is_shared=false
+    if [[ "$namespace" == "shared" ]]; then
+        is_shared=true
+    fi
+
+    # Define jqfilter based on whether we're in the shared namespace
+    if [[ "$is_shared" == "true" ]]; then
+        jqfilter='.items[] | select((type == "object") and ((.name | startswith("ves-io-")) | not)) | .name'
+    else
+        jqfilter='.items[] | select((type == "object") and ((.namespace == "shared" or .namespace == "system" or .tenant == "ves-io") | not) and ((.name | startswith("ves-io-")) | not)) | .name'
+    fi
+
     echo "Processing namespace: $namespace"
     ns_backup_dir="$BACKUP_DIR/$namespace"
     any_objects=false
@@ -127,14 +141,7 @@ for namespace in $namespaces; do
     if echo "$route_list" | jq -e . >/dev/null 2>&1; then
         if [ "$(echo "$route_list" | jq '.items | length')" -gt 0 ]; then
             mkdir -p "$ns_backup_dir/routes"
-            route_names=$(echo "$route_list" | jq -r '
-              .items[]
-              | select(
-                  (type == "object")
-                  and ((.namespace == "shared" or .tenant == "ves-io") | not)
-                  and ((.name | startswith("ves-io-")) | not)
-              )
-              | .name')
+            route_names=$(echo "$route_list" | jq -r "$jqfilter")
             for name in $route_names; do
                 obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/routes/$name")
                 if [[ -n "$obj_json" ]]; then
@@ -154,14 +161,7 @@ for namespace in $namespaces; do
 cert_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/certificates")
 if echo "$cert_list" | jq -e . >/dev/null 2>&1; then
     if [ "$(echo "$cert_list" | jq '.items | length')" -gt 0 ]; then
-        cert_names=$(echo "$cert_list" | jq -r '
-          .items[]
-          | select(
-              (type == "object")
-              and ((.namespace == "shared") | not)
-              and ((.name | startswith("ves-io-")) | not)
-          )
-          | .name')
+        cert_names=$(echo "$cert_list" | jq -r "$jqfilter")
 
         if [ -n "$cert_names" ]; then
             mkdir -p "$ns_backup_dir/certificates"
@@ -186,15 +186,8 @@ fi
     policy_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/service_policys")
     if echo "$policy_list" | jq -e . >/dev/null 2>&1; then
         if [ "$(echo "$policy_list" | jq '.items | length')" -gt 0 ]; then
-            # Only get policy names where namespace is NOT shared
-            policy_names=$(echo "$policy_list" | jq -r '
-              .items[]
-              | select(
-                  (type == "object")
-                  and ((.namespace == "shared" or .tenant == "ves-io") | not)
-                  and ((.name | startswith("ves-io-")) | not)
-              )
-              | .name')
+
+            policy_names=$(echo "$policy_list" | jq -r "$jqfilter")
 
             if [ -n "$policy_names" ]; then
                 mkdir -p "$ns_backup_dir/service_policys"
@@ -210,22 +203,16 @@ fi
         fi
     fi
 
+        if [ "$any_objects" = false ]; then
+        echo "  No service policies found in namespace: $namespace"
+    fi     
+
 # --- Application Firewalls ---
 firewall_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_firewalls")
 if echo "$firewall_list" | jq -e . >/dev/null 2>&1; then
     if [ "$(echo "$firewall_list" | jq '.items | length')" -gt 0 ]; then
-        # Apply advanced filters:
-        # 1. Exclude if tenant is "ves-io" and namespace is "shared"
-        # 2. Exclude if name starts with "ves-io-"
-        firewall_names=$(echo "$firewall_list" | jq -r '
-          .items[]
-          | select(
-              (type == "object")
-              and ((.namespace == "shared" or .tenant == "ves-io") | not)
-              and ((.name | startswith("ves-io-")) | not)
-          )
-          | .name')
 
+        firewall_names=$(echo "$firewall_list" | jq -r "$jqfilter")
 
         if [ -n "$firewall_names" ]; then
             mkdir -p "$ns_backup_dir/app_firewalls"
@@ -241,6 +228,33 @@ if echo "$firewall_list" | jq -e . >/dev/null 2>&1; then
     fi
 fi
 
+    if [ "$any_objects" = false ]; then
+        echo "  No app firewalls found in namespace: $namespace"
+    fi     
+
+ # --- App Settings ---
+appsetting_list=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings")
+if echo "$appsetting_list" | jq -e . >/dev/null 2>&1; then
+    if [ "$(echo "$appsetting_list" | jq '.items | length')" -gt 0 ]; then
+        appsetting_names=$(echo "$appsetting_list" | jq -r "$jqfilter")
+
+        if [ -n "$appsetting_names" ]; then
+            mkdir -p "$ns_backup_dir/app_settings"
+            for name in $appsetting_names; do
+                obj_json=$(send_request "$API_BASE_URL/api/config/namespaces/$namespace/app_settings/$name")
+                if [[ -n "$obj_json" ]]; then
+                    echo "$obj_json" > "$ns_backup_dir/app_settings/${name}.json"
+                    echo "   Backed up App Settings: $name"
+                    any_objects=true
+                fi
+            done
+        fi
+    fi
+fi
+
+    if [ "$any_objects" = false ]; then
+        echo "  No app settings found in namespace: $namespace"
+    fi     
 
     echo "----------------------------------------"
 done
