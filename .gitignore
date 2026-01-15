@@ -3,3 +3,7 @@ example.txt
 *.json
 rbac*.md
 backups
+testing
+
+.DS*
+@eaDir
