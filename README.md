@@ -24,6 +24,8 @@ Scripts:
 
 - **[user_audit.sh](./user_audit.sh)**: audits all users showing roles, last login, and status. Supports filtering by inactive days and CSV export.
 
+- **[lb_cert_conversion.sh](./lb_cert_conversion.sh)**: converts HTTP load balancers from manual certificate (`https`) to auto-certificate (`https_auto_cert`). LB will not maintain previous CNAME value if that is being used.  Will potentially require manual DNS updates.
+
 - **[application_backup.sh](./application_backup.sh)**: will back up all objects in Shared & Application Namespaces:
 
   - HTTP Load Balancers
@@ -55,6 +57,11 @@ Options (script-specific):
 | orphaned_object_audit.sh | `--type=TYPE` | Filter by object type: `origin_pool`, `app_firewall`, `service_policy`, `app_setting`, `api_definition`, `http_loadbalancer` |
 | user_audit.sh | `--inactive-days=N` | Only show users inactive for more than N days |
 | user_audit.sh | `--format=FORMAT` | Output format: `table` (default), `csv` |
+| lb_cert_conversion.sh | `--namespace=NS` | Target namespace (required) |
+| lb_cert_conversion.sh | `--lb-name=NAME` | Specific LB to convert |
+| lb_cert_conversion.sh | `--all` | Convert all manual-cert LBs in namespace |
+| lb_cert_conversion.sh | `--dry-run` | Show what would change without executing |
+| lb_cert_conversion.sh | `--yes` | Skip per-LB confirmation prompts |
 
 Examples:
 
@@ -79,4 +86,13 @@ Examples:
 
 # Export user audit to CSV
 ./user_audit.sh abcdefg8675309= customer-tenant --format=csv > users.csv
+
+# Dry-run: preview which LBs would be converted in a namespace
+./lb_cert_conversion.sh abcdefg8675309= customer-tenant --namespace=my-app --all --dry-run
+
+# Convert a single LB from manual-cert to auto-cert
+./lb_cert_conversion.sh abcdefg8675309= customer-tenant --namespace=my-app --lb-name=my-https-lb
+
+# Convert all manual-cert LBs in a namespace without prompting
+./lb_cert_conversion.sh abcdefg8675309= customer-tenant --namespace=my-app --all --yes
 ```
