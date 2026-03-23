@@ -2,8 +2,14 @@ example.txt
 *.txt
 *.json
 rbac*.md
-backups
-testing
+backups/
+testing/
+docs/
 
 .DS*
 @eaDir
+
+# Test suite
+tests/.env.test
+tests/bats/
+!tests/fixtures/*.json

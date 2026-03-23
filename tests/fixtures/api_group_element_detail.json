@@ -1,0 +1,1 @@
+{"spec": {"methods": ["GET", "POST"], "path_regex": "/api/v1/.*"}}

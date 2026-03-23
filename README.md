@@ -26,6 +26,8 @@ Scripts:
 
 - **[lb_cert_conversion.sh](./lb_cert_conversion.sh)**: converts HTTP load balancers from manual certificate (`https`) to auto-certificate (`https_auto_cert`). LB will not maintain previous CNAME value if that is being used.  Will potentially require manual DNS updates.
 
+- **[service_policy_allowlist_update.sh](./service_policy_allowlist_update.sh)**: queries `ipv4.icanhazip.com` for your current public IP and creates or updates a specified service policy allow list with that IP. If the policy exists, the IP is appended (if not already present). If it doesn't exist, a new policy is created with `default_action_deny`.
+
 - **[application_backup.sh](./application_backup.sh)**: will back up all objects in Shared & Application Namespaces:
 
   - HTTP Load Balancers
@@ -63,6 +65,8 @@ Options (script-specific):
 | lb_cert_conversion.sh | `--dry-run` | Show what would change without executing |
 | lb_cert_conversion.sh | `--yes` | Skip per-LB confirmation prompts |
 
+| service_policy_allowlist_update.sh | | Note: uses `<policy-name> <namespace> <tenant> <api-token>` argument order |
+
 Examples:
 
 ```bash
@@ -95,4 +99,32 @@ Examples:
 
 # Convert all manual-cert LBs in a namespace without prompting
 ./lb_cert_conversion.sh abcdefg8675309= customer-tenant --namespace=my-app --all --yes
+
+# Add current public IP to a service policy allow list (creates if not found)
+./service_policy_allowlist_update.sh my-allow-policy my-namespace customer-tenant abcdefg8675309=
 ```
+
+## Testing
+
+The repo includes a [BATS](https://github.com/bats-core/bats-core)-based test suite with unit tests (mocked curl) and integration tests (live API).
+
+### Setup
+
+```bash
+# First run installs BATS automatically
+cp tests/.env.test.example tests/.env.test
+# Edit tests/.env.test with your tenant, token, and namespace
+```
+
+### Running Tests
+
+```bash
+./tests/run_tests.sh              # Unit tests only (default, ~10 seconds)
+./tests/run_tests.sh --integration # Integration tests (requires .env.test, ~12 minutes)
+./tests/run_tests.sh --all        # Both
+```
+
+### Test Coverage
+
+- **Unit tests (146 tests):** All 16 scripts covered — argument validation, missing jq, API error handling, and script-specific logic. Uses a PATH-based curl mock with URL-pattern routing.
+- **Integration tests (10 tests):** Live API tests for safe, non-destructive scripts — `service_policy_allowlist_update.sh` (create/idempotent/verify), `orphaned_object_audit.sh`, `all_ce_reboot_audit.sh`, and `user_audit.sh`. Skips gracefully when token lacks permissions.

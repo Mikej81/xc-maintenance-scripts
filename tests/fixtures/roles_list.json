@@ -1,0 +1,1 @@
+{"items": [{"name": "admin-role", "tenant": "test-tenant", "namespace": "system", "api_groups": ["ves-io-api-read", "ves-io-api-write"]}]}

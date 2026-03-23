@@ -1,0 +1,1 @@
+{"metadata": {"name": "used-pool", "namespace": "test-ns"}, "system_metadata": {"creation_timestamp": "2025-06-01T00:00:00Z", "modification_timestamp": "2025-06-01T00:00:00Z", "creator_id": "user@example.com"}, "referring_objects": [{"kind": "http_loadbalancer", "name": "my-lb", "namespace": "test-ns"}]}

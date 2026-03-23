@@ -1,0 +1,1 @@
+{"items": [{"name": "test-site-1", "tenant": "test-tenant", "get_spec": {"site_type": "CUSTOMER_EDGE", "address": "10.0.0.1"}}]}

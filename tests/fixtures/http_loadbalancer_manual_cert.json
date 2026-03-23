@@ -1,0 +1,1 @@
+{"metadata": {"name": "manual-cert-lb", "namespace": "test-ns"}, "spec": {"domains": ["example.com"], "https": {"tls_cert_params": {"tls_config": {"default_security": {}}}, "http_redirect": true}}}
